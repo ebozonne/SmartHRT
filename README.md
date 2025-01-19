@@ -24,6 +24,7 @@ The challenge is to identify the `recovery time`, neither too soon (to avoid was
   - time of heating interruption (`recoverycalc_hour`) - e.g. 11PM
   - wake-up time (`target_hour`) - e.g. 6AM
   - target temperature (`tsp`) - e.g. 20°C
+    
   Default adaptive mode (can be adjusted or deactivated for further manual tuning -> see advanced mode):
   - `Self Calibration` (activated by default) which computes coefficients for your own room after each recovery cycle
 - `TEST`panel: run the calculation script to check the predicted `recovery time`. The script predicts the decrease in `Tint` before `recovery time` based on room constants
