@@ -8,7 +8,7 @@ Without predicting the correct time to start heating at night, it is either too 
 
 The principle is simple: while sleeping, heating can be completely turned off and boosted at the correct `recovery time`.
 
-<img src="img/SmartHeatingRecoveryTime_principle.png" alt="Alt Text" style="width:50%; height:auto;">
+<img src="img/SmartHeatingRecoveryTime_principle.png" alt="Alt Text" style="width:75%; height:auto;">
 
 The challenge is to identify the `recovery time`, neither too soon (to avoid wasting money, emitting CO2, and using excess kWh), nor too late (to obtain thermal comfort). This problem involves:
 
@@ -30,7 +30,7 @@ The "magic" of this program is to figure out and adjust $`RC_{th}`$ and $`RP_{th
 
 ## Interface
 
-<img src="img/SmartHRT_dashboard.png" alt="Alt Text" style="width:75%; height:auto;">
+<img src="img/SmartHRT_dashboard.png" alt="Alt Text" style="width:90%; height:auto;">
 
 > NOTE: disable `Recovery time calculation CONFIGURATION` during the holydays and the non-heating seasons
 
