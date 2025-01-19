@@ -1,5 +1,5 @@
 type: sections
-max_columns: 4
+max_columns: 3
 title: thermal
 path: thermal
 icon: mdi:radiator
@@ -8,7 +8,13 @@ sections:
     cards:
       - type: heading
         heading_style: title
-        badges: []
+        badges:
+          - type: entity
+            show_state: true
+            show_icon: true
+            entity: input_boolean.smartheating_mode
+            tap_action:
+              action: toggle
         icon: mdi:import
         heading: CONFIGURATION
       - type: custom:bubble-card
@@ -116,6 +122,8 @@ sections:
           - condition: state
             entity: input_boolean.recovery_adaptive_mode
             state: "off"
+  - type: grid
+    cards:
       - type: heading
         heading_style: title
         badges: []
@@ -126,8 +134,6 @@ sections:
           columns: 12
           rows: 1
         entity: script.calculate_recovery_time
-  - type: grid
-    cards:
       - type: heading
         heading_style: title
         icon: mdi:home-search-outline

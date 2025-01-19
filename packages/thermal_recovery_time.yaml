@@ -35,6 +35,10 @@ input_datetime:
     icon: mdi:clock-out
 
 input_boolean:
+  smartheating_mode:
+    name: smartheating_mode
+    initial: true
+    icon: mdi:radiator
   rp_calc_mode:
     name: rp_calc_mode
     initial: false
@@ -329,7 +333,10 @@ automation:
       - at: input_datetime.recoveryupdate_hour
         trigger: time
         id: Nth_RECOVERY_calc
-    conditions: []
+    conditions:
+      - condition: state
+        entity_id: input_boolean.smartheating_mode
+        state: "on"
     actions:
       - choose:
           - conditions:
@@ -386,7 +393,7 @@ automation:
         id: recoveryendTIME
     conditions:
       - condition: state
-        entity_id: input_boolean.chauffage_relance_matin
+        entity_id: input_boolean.smartheating_mode
         state: "on"
     actions:
       - choose:
