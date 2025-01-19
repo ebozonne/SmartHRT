@@ -1,7 +1,7 @@
 # SmartHRT
 Smart Heating Recovery Time calculation for Home Assistant
 
-## Concept
+## Concepts
 > Why do I need it?
 The thermal mass of my radiators and walls provides good thermal comfort but makes it hard to predict the heating recovery time in the morning.
 Without predicting the correct time to start heating at night, it is either too late (and too cold) or too soon (heating the living room unnecessarily while sleeping).
@@ -15,9 +15,24 @@ The challenge is to identify the `recovery time`, neither too soon (to avoid was
 - 2 variables: interior & exterior temperatures (`Tint` & `Text`)
 - 1 objective: set point temperature `Tsp` at wake up time `target_hour`
 
+## Why there is a self-calibration script?
+> Every home is unique, but when it comes to room temperature evolution, physics can simplify things to just two parameters:
+> - `RCth`: this combines your home's insulation (including air infiltrations) & its effective thermal mass (emitter, furniture, walls, ...)
+> - `RPth`: this combines the same insulation & the effective heating power
+
+Both RCth & RPth are necessary to determine the `recovery time`
+
+$$ recoveryTime = RC_{th} \cdot ln \left( \frac {RP_{th}+T_{ext}-T_{int}^{START}} {RP_{th}+T_{ext}-T_{sp}} \right) $$
+
+Damned, unlike many existing controllers, this is clearly non-linear!
+
+The "magic" of this program is to figure out and adjust $`RC_{th}`$ and $`RP_{th}`$ by monitoring your temperatures with a `relaxation` parameter :)
+
 ## Interface
 
-<img src="img/SmartHRT_dashboard.png" alt="Alt Text" style="width:35%; height:auto;">
+<img src="img/SmartHRT_dashboard.png" alt="Alt Text" style="width:75%; height:auto;">
+
+> NOTE: disable `Recovery time calculation CONFIGURATION` during the holydays and the non-heating seasons
 
 - `CONFIGURATION` panel (4 inputs required):
   - interior temperature `sensor name` (default: my own indoor sensor -> `sensor.salon_temperature`)
@@ -42,6 +57,7 @@ The challenge is to identify the `recovery time`, neither too soon (to avoid was
   - [Lovelace-Mushroom](https://github.com/piitaya/lovelace-mushroom)
   - [Bubble-Card](https://github.com/Clooos/Bubble-Card)
   - [Mini-Graph-Card](https://github.com/kalkih/mini-graph-card)
+  - [Lovelace-Card-Mod](https://github.com/thomasloven/lovelace-card-mod)
 - A simple calendar, timetable, and/or automation for heating during the week to know the interruption time at night (and to set the `recoverycalc_hour` correctly)
 
 ### Download and install
@@ -62,3 +78,12 @@ e.g. I have this automation to manage my radiatiors
 - Configure the 4 required inputs
 - Test the script for the calculation of `recovery time`
 - Check next morning if everything went well - The `Self Calibration` requires a few days to adapt `RCth`and `RPth`constants for better predictions; the first night may not be accurate. Following days should give better predictions with self calibration mode (further manual adjustments are always possible in advanced mode)
+
+# TODO
+- ADD readme for advanced use
+- ADD automatic wind correlation for `Rth` variations (important for old buildings with high infiltration rates, and high-rise buildings)
+- ADD recovery optimization based on energy prices and periods (e.g. TEMPO in France)
+- ADD predicted exterior temperature (weather data) in the recovery time calculation (important for very cold mornings)
+- ADD solar radiation effects (weather data) for a future diurnal recovery time calculation
+- ADD second order effects for vacation recovery calculation vs. typical weekly occupancy variations.
+- INTEGRATE all variables and parameters into a single entity to manage different rooms (important for castle owners)
