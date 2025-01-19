@@ -55,9 +55,9 @@ The difficulty is to identify `recovery time`, neither too soon (money, emitted 
 
 e.g. I have this automation to manage my radiatiors
 
-...img of automation...
+<img src="img/HeatingAutomationExample.png" alt="Alt Text" style="width:35%; height:auto;">
 
-### Testing and using the recovery optimization
+## Testing and using the recovery optimization
 - Configure the 4 required inputs
 - Test the script for the calculation of `recovery time`
 - See next morning if everything went well (the `Self Calibration` requires few days to adapt `RCth`and `RPth`constants to get better predictions, first night cannot be really correct or would need a manual adjustment, see advanced mode)
