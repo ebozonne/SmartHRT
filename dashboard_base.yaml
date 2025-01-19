@@ -28,6 +28,10 @@ sections:
         icon: mdi:home-thermometer-outline
         card_layout: large-2-rows
         name: SensorName->
+        styles: |-
+          * { 
+            font-size: 12px !important;
+          }
       - type: custom:bubble-card
         sub_button:
           - show_name: true
