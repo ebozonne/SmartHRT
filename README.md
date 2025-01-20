@@ -5,7 +5,7 @@ Smart Heating Recovery Time calculation for Home Assistant
 1. [Concepts](#concepts)
 2. [Why there is a self-calibration script?](#why-there-is-a-self-calibration-script)
 3. [Interface](#interface)
-4. [Installation](installation)
+4. [Installation](#installation)
 5. [Testing and using the recovery optimization](#testing-and-using-the-recovery-optimization)
 6. [TODO](#todo)
 
