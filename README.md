@@ -1,6 +1,14 @@
 # SmartHRT
 Smart Heating Recovery Time calculation for Home Assistant
 
+# Table of Contents
+1. [Concepts](#concepts)
+2. [Why there is a self-calibration script?](#why-there-is-a-self-calibration-script)
+3. [Interface](#interface)
+4. [Testing and using the recovery optimization](#testing-and-using-the-recovery-optimization)
+5. [TODO](#todo)
+
+
 ## Concepts
 > Why do I need it?
 The thermal mass of my radiators and walls provides good thermal comfort but makes it hard to predict the heating recovery time in the morning.
