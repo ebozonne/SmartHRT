@@ -31,7 +31,7 @@ The challenge is to identify the `recovery time`, neither too soon (to avoid was
 
 Both RCth & RPth are necessary to determine the `recovery time`
 
-$$ recoveryTime = RC_{th} \cdot ln \left( \frac {RP_{th}+T_{ext}-T_{int}^{START}} {RP_{th}+T_{ext}-T_{sp}} \right) $$
+$$ recoveryTime = RC_{th} \cdot ln \left( \frac {RP_{th}-\left(T_{int}^{START}-T_{ext}\right)} {RP_{th}-\left( T_{sp}-T_{ext}\right)} \right) $$
 
 Damned, unlike many existing controllers, this is clearly non-linear!
 
