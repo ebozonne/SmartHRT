@@ -55,12 +55,10 @@ input_boolean:
 input_text:
   sensor_interior_temperature:
     name: Capteur de température intérieure
-    initial: sensor.salon_temperature
 
 input_number:
   rcth:
     name: Coefficient RCth
-    initial: 50
     min: 0
     max: 1000
     step: 0.5
@@ -68,15 +66,28 @@ input_number:
     icon: mdi:home-battery-outline
   rpth:
     name: Coefficient RPth
-    initial: 50
     min: -200
-    max: 200
+    max: 1000
     step: 0.5
     unit_of_measurement: "°C"
     icon: mdi:home-lightning-bolt-outline
   rcth_fast:
     name: RCth dynamique
     initial: 0
+    min: 0
+    max: 20000
+    step: 0.5
+    unit_of_measurement: "h"
+    icon: mdi:home-battery-outline
+  rcth_lw:
+    name: RCth low wind
+    min: 0
+    max: 20000
+    step: 0.5
+    unit_of_measurement: "h"
+    icon: mdi:home-battery-outline
+  rcth_hw:
+    name: RCth high wind
     min: 0
     max: 20000
     step: 0.5
@@ -152,6 +163,13 @@ input_number:
     max: 15
     step: 0.05
     icon: mdi:brain
+  stop_lag_duration:
+    name: Durée avant baisse de température
+    min: 0
+    max: 10800
+    step: 1
+    unit_of_measurement: "s"
+    icon: mdi:timer-outline
 
 template:
   - sensor:
@@ -159,7 +177,7 @@ template:
         unique_id: interior_temperature
         state: "{{ states(states.input_text.sensor_interior_temperature.state) }}"
         unit_of_measurement: "°C"
-        icon: mdi:thermometer
+        device_class: temperature
       - name: "exterior_temperature"
         unique_id: exterior_temperature
         state: >
@@ -170,24 +188,29 @@ template:
             {{ null }}
           {% endif %}
         unit_of_measurement: "°C"
-        icon: mdi:thermometer
+        device_class: temperature
+        state_class: measurement
       - name: "recoverystart_hour_value"
         unique_id: recoverystart_hour_value
         state: >
           {{ ((states('input_datetime.recoverystart_hour')[0:2] | int) + (states('input_datetime.recoverystart_hour')[3:5] | int) / 60) | round(2)  }}
         unit_of_measurement: "h"
+        state_class: measurement
         icon: mdi:hours-24
       - name: "rcth_value"
         unique_id: rcth_value
         state: >
           {{ states('input_number.rcth') | float }}
         unit_of_measurement: "h"
+        state_class: measurement
         icon: mdi:home-battery-outline
       - name: "rpth_value"
         unique_id: rpth_value
         state: >
           {{ states('input_number.rpth') | float }}
         unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
         icon: mdi:home-lightning-bolt-outline
       - name: "wind_speed"
         unique_id: wind_speed
@@ -199,6 +222,8 @@ template:
             {{ 0 }}
           {% endif %}
         unit_of_measurement: "m/s"
+        device_class: wind_speed
+        state_class: measurement
         icon: mdi:weather-windy
       - name: "windchill"
         unique_id: windchill
@@ -211,7 +236,48 @@ template:
             {{ temp }}
           {% endif %}
         unit_of_measurement: "°C"
+        device_class: temperature
         icon: mdi:snowflake-thermometer
+      - name: "night_state"
+        unique_id: night_state
+        state: >
+          {% if is_state('sun.sun', 'below_horizon') %}
+            1
+          {% else %}
+            0
+          {% endif %}
+        icon: mdi:weather-night
+  - trigger:
+      - trigger: time_pattern
+        hours: "/1"
+    action:
+      - action: weather.get_forecasts
+        data:
+          type: hourly
+        target:
+          entity_id: >
+            {{ states.weather | selectattr('attributes.wind_speed', 'defined') | map('attr', 'entity_id') | list }}
+        response_variable: hourly_forecast
+    sensor:
+      - name: "wind_speed_forecast_avg"
+        unique_id: wind_speed_forecast_avg
+        state: >
+          {% set forecast_hours = 3 %}
+          {% set weather_entities = states.weather | selectattr('attributes.wind_speed', 'defined') | map('attr', 'entity_id') | list %}
+          {{ (hourly_forecast[weather_entities[0]]['forecast'][:forecast_hours] | map(attribute='wind_speed') | sum / forecast_hours) | round(2) }}
+        unit_of_measurement: "m/s"
+        device_class: wind_speed
+        state_class: measurement
+        icon: mdi:weather-windy
+
+sensor:
+  - platform: statistics
+    name: "wind_speed_avg"
+    unique_id: wind_speed_avg
+    entity_id: sensor.wind_speed
+    state_characteristic: mean
+    max_age:
+      hours: 4
 
 script:
   calculate_recovery_time:
@@ -249,12 +315,11 @@ script:
             {% set time = target_time - timedelta(seconds=seconds) %}
 
             {{ time.strftime('%H:%M:%S') }}
-      - metadata: {}
+      - action: input_datetime.set_datetime
         data:
           datetime: "{{ now().strftime('%Y-%m-%d ') + recoverystart_hour }}"
         target:
           entity_id: input_datetime.recoverystart_hour
-        action: input_datetime.set_datetime
     mode: single
     icon: mdi:hours-24
 
@@ -270,7 +335,7 @@ script:
               {% set recoverystart_time = recoverystart_time + timedelta(days=1) %}
             {% endif %}
             {% set time_remaining = (recoverystart_time - now()).total_seconds() %}
-            {# recalcul pas plus tard que dans 1200s (20min) #}
+            {# recalcule pas plus tard que dans 1200s (20min) #}
             {% set seconds = min(max(time_remaining/3, 0), 1200) %}
             {# à moins d'30min avant la relance on arrête en imposant un calcul après la relance qui elle stop le calcul #}
             {% if time_remaining < 1800 %}
@@ -282,12 +347,11 @@ script:
             {% endif %}
             {# {{ now().strftime('%Y-%m-%d ') + time.strftime('%H:%M:%S') }} #}
             {{ time }}
-      - metadata: {}
+      - action: input_datetime.set_datetime
         data:
           datetime: "{{ recoveryupdate_hour }}"
         target:
           entity_id: input_datetime.recoveryupdate_hour
-        action: input_datetime.set_datetime
     mode: single
     icon: mdi:hours-24
 
@@ -323,13 +387,74 @@ script:
     icon: mdi:hours-24
 
 automation:
+  - id: detect_temperature_lag
+    alias: Detect Temperature Decrease Start Time
+    description: "Détecte le délai entre l'arrêt du chauffage et la baisse de température"
+    initial_state: false
+    triggers:
+      - trigger: template
+        value_template: >-
+          {{ states('sensor.interior_temperature')|float <= (states('input_number.temperature_recovery_calc')|float - 0.2) }}
+        id: temperatureDecrease
+      - trigger: template
+        value_template: >-
+          {{ states('sensor.interior_temperature')|float > (states('input_number.temperature_recovery_calc')|float) }}
+        id: temperatureIncrease
+    actions:
+      - choose:
+          - conditions:
+              - condition: trigger
+                id:
+                  - temperatureDecrease
+            sequence:
+              - action: input_number.set_value
+                target:
+                  entity_id: input_number.stop_lag_duration
+                data:
+                  value: >
+                    {% set calc_time = as_datetime(states('input_datetime.time_recovery_calc')) %}
+                    {{ min( (now().timestamp() - calc_time.timestamp()) | int, 10799) }}
+              - action: input_number.set_value
+                target:
+                  entity_id: input_number.temperature_recovery_calc
+                data:
+                  value: "{{ states('sensor.interior_temperature') | float }}"
+              - action: input_number.set_value
+                target:
+                  entity_id: input_number.text_recovery_calc
+                data:
+                  value: "{{ states('sensor.exterior_temperature') | float }}"
+              - action: input_datetime.set_datetime
+                data:
+                  datetime: "{{ now() }}"
+                target:
+                  entity_id: input_datetime.time_recovery_calc
+              - action: script.calculate_recovery_time
+              - action: script.calculate_recoveryupdate_time
+              - action: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.recovery_calc_mode
+              - action: automation.turn_off
+                target:
+                  entity_id: automation.detect_temperature_decrease_start_time
+
+          - conditions:
+              - condition: trigger
+                id:
+                  - temperatureIncrease
+            sequence:
+              - action: input_number.set_value
+                target:
+                  entity_id: input_number.temperature_recovery_calc
+                data:
+                  value: "{{ states('sensor.interior_temperature') | float }}"
+
+    mode: single
+
   - id: trigger_target_hour_calc
     alias: trigger target_hour calc
     description: "déclencher calcul heure relance"
     triggers:
-      - at: input_datetime.recoverycalc_hour
-        trigger: time
-        id: 1st_RECOVERY_calc
       - at: input_datetime.recoveryupdate_hour
         trigger: time
         id: Nth_RECOVERY_calc
@@ -342,44 +467,23 @@ automation:
           - conditions:
               - condition: trigger
                 id:
-                  - 1st_RECOVERY_calc
-            sequence:
-              - action: script.calculate_recovery_time
-                metadata: {}
-                data: {}
-              - action: script.calculate_recoveryupdate_time
-                metadata: {}
-                data: {}
-              - action: input_boolean.turn_on
-                metadata: {}
-                data: {}
-                target:
-                  entity_id: input_boolean.recovery_calc_mode
-          - conditions:
-              - condition: trigger
-                id:
                   - Nth_RECOVERY_calc
               - condition: state
                 entity_id: input_boolean.recovery_calc_mode
                 state: "on"
             sequence:
               - action: script.calculate_rcth_fast
-                metadata: {}
-                data: {}
               - action: script.calculate_recovery_time
-                metadata: {}
-                data: {}
               - action: script.calculate_recoveryupdate_time
-                metadata: {}
-                data: {}
     mode: single
+
   - id: recovery_constants_calc2
     alias: recovery constants calc2
     description: calcul de RCth et RPth
     triggers:
       - trigger: time
         at: input_datetime.recoverycalc_hour
-        id: recoveryTIME
+        id: heatingstopTIME
       - trigger: time
         at: input_datetime.recoverystart_hour
         id: boostTIME
@@ -400,24 +504,22 @@ automation:
           - conditions:
               - condition: trigger
                 id:
-                  - recoveryTIME
+                  - heatingstopTIME
             sequence:
+              - action: input_datetime.set_datetime
+                data:
+                  datetime: "{{ now() }}"
+                target:
+                  entity_id: input_datetime.time_recovery_calc
               - action: input_number.set_value
                 target:
                   entity_id: input_number.temperature_recovery_calc
                 data:
                   value: "{{ states('sensor.interior_temperature') | float }}"
-              - action: input_number.set_value
+              - action: automation.turn_on
                 target:
-                  entity_id: input_number.text_recovery_calc
-                data:
-                  value: "{{ states('sensor.exterior_temperature') | float }}"
-              - action: input_datetime.set_datetime
-                metadata: {}
-                data:
-                  datetime: "{{ now() }}"
-                target:
-                  entity_id: input_datetime.time_recovery_calc
+                  entity_id: automation.detect_temperature_decrease_start_time
+
           - conditions:
               - condition: trigger
                 id:
@@ -434,7 +536,6 @@ automation:
                 data:
                   value: "{{ states('sensor.exterior_temperature') | float }}"
               - action: input_datetime.set_datetime
-                metadata: {}
                 data:
                   datetime: "{{ now() }}"
                 target:
@@ -467,15 +568,12 @@ automation:
                       {{ rcth_prev }}
                     {%- endif %}
               - action: input_boolean.turn_on
-                metadata: {}
-                data: {}
                 target:
                   entity_id: input_boolean.rp_calc_mode
               - action: input_boolean.turn_off
-                metadata: {}
-                data: {}
                 target:
                   entity_id: input_boolean.recovery_calc_mode
+
           - conditions:
               - condition: trigger
                 id:
@@ -495,7 +593,6 @@ automation:
                 data:
                   value: "{{ states('sensor.exterior_temperature') | float }}"
               - action: input_datetime.set_datetime
-                metadata: {}
                 data:
                   datetime: "{{ now() }}"
                 target:
@@ -529,8 +626,6 @@ automation:
                       {{ rpth_prev }}
                     {%- endif %}
               - action: input_boolean.turn_off
-                metadata: {}
-                data: {}
                 target:
                   entity_id: input_boolean.rp_calc_mode
     mode: single

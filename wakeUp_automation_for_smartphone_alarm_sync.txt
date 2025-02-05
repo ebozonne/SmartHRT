@@ -1,0 +1,26 @@
+Copy paste in a new automation and replace the name of your smartphone alarm sensor that appears in home assistant (named 'clt_l29' here)
+
+alias: Recovery_target_alarm
+description: ""
+triggers:
+  - trigger: state
+    entity_id:
+      - sensor.clt_l29_next_alarm
+conditions:
+  - condition: template
+    value_template: "{{ states('sensor.clt_l29_next_alarm') != 'unknown' }}"
+  - condition: template
+    value_template: >
+      {% set alarm_time = states('sensor.clt_l29_next_alarm') | as_datetime %}
+      {% set tomorrow = (now() + timedelta(days=1)).date() %} {{
+      alarm_time.date() == now().date() or alarm_time.date() == tomorrow }}
+actions:
+  - action: input_datetime.set_datetime
+    target:
+      entity_id: input_datetime.target_hour
+    data:
+      time: >
+        {% set alarm_time = states('sensor.clt_l29_next_alarm') %} {% set
+        alarm_time = alarm_time | as_datetime | as_local %} {{
+        alarm_time.strftime('%H:%M:%S') }}
+mode: single
