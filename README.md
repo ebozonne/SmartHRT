@@ -96,3 +96,8 @@ e.g. I have this automation to manage my radiatiors
 - ADD solar radiation effects (weather data) for a future diurnal recovery time calculation
 - ADD second order effects for vacation recovery calculation vs. typical weekly occupancy variations.
 - INTEGRATE all variables and parameters into a single entity to manage different rooms (important for castle owners)
+
+## Feb 5 update
+- NEW option: additional wakeup automation template (see wakeUp_automation_for_smartphone_alarm_sync.txt) to automatically sync the target time with the smartphone alarm (no more need to set target time manually)
+- NEW: time lag monitoring after heating systems is turned off for better prediction of temperature's decrease parameter (RCth)
+- FIXED: no more initial values that overwrite parameters when HA reboots
