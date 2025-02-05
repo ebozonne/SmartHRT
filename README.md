@@ -101,3 +101,4 @@ e.g. I have this automation to manage my radiatiors
 - NEW option: additional wakeup automation template (see wakeUp_automation_for_smartphone_alarm_sync.txt) to automatically sync the target time with the smartphone alarm (no more need to set target time manually)
 - NEW: time lag monitoring after heating systems is turned off for better prediction of temperature's decrease parameter (RCth)
 - FIXED: no more initial values that overwrite parameters when HA reboots
+- FIXED: missing nighttime sensor for the graph added to the package
