@@ -60,14 +60,14 @@ input_number:
   rcth:
     name: Coefficient RCth
     min: 0
-    max: 1000
+    max: 19999
     step: 0.5
     unit_of_measurement: "h"
     icon: mdi:home-battery-outline
   rpth:
     name: Coefficient RPth
-    min: -200
-    max: 1000
+    min: 0
+    max: 19999
     step: 0.5
     unit_of_measurement: "°C"
     icon: mdi:home-lightning-bolt-outline
@@ -75,21 +75,21 @@ input_number:
     name: RCth dynamique
     initial: 0
     min: 0
-    max: 20000
+    max: 19999
     step: 0.5
     unit_of_measurement: "h"
     icon: mdi:home-battery-outline
   rcth_lw:
     name: RCth low wind
     min: 0
-    max: 20000
+    max: 19999
     step: 0.5
     unit_of_measurement: "h"
     icon: mdi:home-battery-outline
   rcth_hw:
     name: RCth high wind
     min: 0
-    max: 20000
+    max: 19999
     step: 0.5
     unit_of_measurement: "h"
     icon: mdi:home-battery-outline
@@ -145,14 +145,14 @@ input_number:
   rcth_calculated:
     name: RCth_calculated
     min: 0
-    max: 100
+    max: 19999
     step: 0.5
     unit_of_measurement: "h"
     icon: mdi:home-battery-outline
   rpth_calculated:
     name: RPth_calculated
     min: 0
-    max: 100
+    max: 19999
     step: 0.5
     unit_of_measurement: "°C"
     icon: mdi:home-lightning-bolt-outline
@@ -379,7 +379,7 @@ script:
               {{ rcth_prev }}
             {% endif %}
       - data:
-          value: "{{ rcth_fast | round(3) }}"
+          value: "{{ min( rcth_fast, 19999) | round(3) }}"
         target:
           entity_id: input_number.rcth_fast
         action: input_number.set_value
@@ -553,7 +553,7 @@ automation:
                     {%- set temp_calc = states('input_number.temperature_recovery_calc') | float %}
                     {%- set avg_text = (text_start + text_calc) / 2 %}
                     {%- set dt = (t_start - t_calc) / 3600 %}
-                    {{ ( dt/log((avg_text - temp_calc)/(avg_text - temp_start)) )| round(3) }}
+                    {{ min(19999, dt/log((avg_text - temp_calc)/(avg_text - temp_start)) )| round(3) }}
               - action: input_number.set_value
                 target:
                   entity_id: input_number.rcth
@@ -563,7 +563,7 @@ automation:
                     {%- set rcth_calc = states('input_number.rcth_calculated') | float %}
                     {%- set relax = states('input_number.relaxation_factor') | float %}
                     {%- if states('input_boolean.recovery_adaptive_mode') %}
-                      {{ ( (rcth_prev+relax*rcth_calc)/(1+relax) )| round(3) }}
+                      {{ min(19999, (rcth_prev+relax*rcth_calc)/(1+relax) )| round(3) }}
                     {%- else %}
                       {{ rcth_prev }}
                     {%- endif %}
@@ -611,7 +611,7 @@ automation:
                     {%- set avg_text = (text_start + text_end) / 2 %}
                     {%- set dt = (t_end - t_start) / 3600 %}
                     {%- set rcth = states('input_number.rcth_calculated') | float %}
-                    {{ ( ((avg_text - temp_end) * e**(dt/rcth) - (avg_text - temp_start)) / (1-e**(dt/rcth)) ) | round(3) }}
+                    {{ min(19999, ((avg_text - temp_end) * e**(dt/rcth) - (avg_text - temp_start)) / (1-e**(dt/rcth)) ) | round(3) }}
               - action: input_number.set_value
                 target:
                   entity_id: input_number.rpth
@@ -621,7 +621,7 @@ automation:
                     {%- set rpth_calc = states('input_number.rpth_calculated') | float %}
                     {%- set relax = states('input_number.relaxation_factor') | float %}
                     {%- if states('input_boolean.recovery_adaptive_mode') %}
-                      {{ ( (rpth_prev+relax*rpth_calc)/(1+relax) )| round(3) }}
+                      {{ min(19999, (rpth_prev+relax*rpth_calc)/(1+relax) )| round(3) }}
                     {%- else %}
                       {{ rpth_prev }}
                     {%- endif %}
