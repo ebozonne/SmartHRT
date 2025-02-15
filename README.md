@@ -39,15 +39,16 @@ The "magic" of this program is to figure out and adjust $`RC_{th}`$ and $`RP_{th
 
 ## Interface
 
-<img src="img/SmartHRT_dashboard.png" alt="Alt Text" style="width:90%; height:auto;">
+<img src="img/smartHRT_dashboard.png" alt="Alt Text" style="width:90%; height:auto;">
 
 > NOTE: disable `Recovery time calculation CONFIGURATION` during the holydays and the non-heating seasons
 
 - `CONFIGURATION` panel (4 inputs required):
-  - interior temperature `sensor name` (default: my own indoor sensor -> `sensor.salon_temperature`)
-  - time of heating interruption (`recoverycalc_hour`) - e.g. 11PM
-  - wake-up time (`target_hour`) - e.g. 6AM
-  - target temperature (`tsp`) - e.g. 20°C
+  - SET the interior temperature `sensor name` (e.g. my own indoor sensor -> `sensor.salon_temperature`)
+  - SET the time of heating interruption (`recoverycalc_hour`) - e.g. 11PM
+  - SET the wake-up time (`target_hour`) - e.g. 6AM
+  - OR SET your phone' next alarm `sensor name` in order to get an automatic update of the target time with your wake up time (e.g. my phone alarm is synchronized in home assistant as `sensor.clt_l29_next_alarm`)
+  - SET your target temperature (`tsp`) - e.g. 20°C
     
   Default adaptive mode (can be adjusted or deactivated for further manual tuning -> see advanced mode):
   - `Self Calibration` (activated by default) which computes coefficients for your own room after each recovery cycle
@@ -79,7 +80,7 @@ The "magic" of this program is to figure out and adjust $`RC_{th}`$ and $`RP_{th
   - copy and paste the content of `dashboard_base.yaml` -> save.
 - Add the calculated recovery time (`input_datetime.recoverystart_hour`) as a condition to start the radiators (amongst the other calendar rules) in your own automation
 
-e.g. I have this automation to manage my radiatiors
+e.g. I have this automation to manage my radiators
 
 <img src="img/HeatingAutomationExample.png" alt="Alt Text" style="width:35%; height:auto;">
 
@@ -90,12 +91,17 @@ e.g. I have this automation to manage my radiatiors
 
 # TODO
 - ADD readme for advanced use
-- ADD automatic wind correlation for `Rth` variations (important for old buildings with high infiltration rates, and high-rise buildings)
+- DONE <s>ADD automatic wind correlation for `Rth` variations (important for old buildings with high infiltration rates, and high-rise buildings) </s>
 - ADD recovery optimization based on energy prices and periods (e.g. TEMPO in France)
-- ADD predicted exterior temperature (weather data) in the recovery time calculation (important for very cold mornings)
+- DONE <s>ADD predicted exterior temperature (weather data) in the recovery time calculation (important for very cold mornings)</s>
 - ADD solar radiation effects (weather data) for a future diurnal recovery time calculation
 - ADD second order effects for vacation recovery calculation vs. typical weekly occupancy variations.
 - INTEGRATE all variables and parameters into a single entity to manage different rooms (important for castle owners)
+
+## Feb 15 update
+- NEW: coefficients RCth and RPth are now correlated to average winds, the self calibration auto-adjust values for low an high winds (10 an 60km/h) assuming a linear variation between both
+- NEW: future exterior temperatures and winds are taken into account to assess recovery start time
+- NEW: text field to set-up the Next alarm sensor name of your phone (e.g. sensor.mynexus_next_alarm) to automatically sync the target time with your phone alarm in the morning
 
 ## Feb 5 update
 - NEW option: additional wakeup automation template (see wakeUp_automation_for_smartphone_alarm_sync.txt) to automatically sync the target time with the smartphone alarm (no more need to set target time manually)
