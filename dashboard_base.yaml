@@ -16,7 +16,7 @@ sections:
             tap_action:
               action: toggle
         icon: mdi:import
-        heading: CONFIGURATION
+        heading: CONFIGURATION [set ON/OFF]->
       - type: custom:bubble-card
         sub_button:
           - entity: sensor.interior_temperature
@@ -24,6 +24,7 @@ sections:
             show_state: true
             show_attribute: false
             show_icon: false
+            show_background: false
           - entity: input_text.sensor_interior_temperature
             show_name: false
             show_state: true
@@ -33,16 +34,16 @@ sections:
         card_type: separator
         icon: mdi:home-thermometer-outline
         card_layout: large-2-rows
-        name: SensorName->
+        name: SET SensorName->
         styles: |-
           * { 
-            font-size: 12px !important;
+            font-size: 11px !important;
           }
       - type: custom:bubble-card
         sub_button:
           - show_name: true
             show_state: true
-            name: Heating OFF - calc time (e.g. 11pm)
+            name: Heating OFF (e.g. 11pm)
             show_icon: true
             state_background: true
             entity: input_datetime.recoverycalc_hour
@@ -51,7 +52,11 @@ sections:
         card_type: separator
         icon: mdi:radiator-off
         card_layout: large
-        name: ""
+        name: SET off time->
+        styles: |-
+          * { 
+            font-size: 11px !important;
+          }
       - type: custom:bubble-card
         sub_button:
           - show_name: true
@@ -70,7 +75,47 @@ sections:
         card_type: separator
         icon: mdi:clock-end
         card_layout: large-2-rows
-        name: ""
+        name: SET target->
+        styles: |-
+          * { 
+            font-size: 11px !important;
+          }
+      - type: custom:bubble-card
+        card_type: button
+        entity: automation.recovery_target_alarm2
+        card_layout: large-2-rows
+        show_state: true
+        force_icon: true
+        sub_button:
+          - entity: sensor.phone_nxt_alarm
+            show_name: false
+            show_state: true
+            show_attribute: false
+            show_icon: false
+            visibility:
+              - condition: state
+                entity: automation.recovery_target_alarm2
+                state: "on"
+            state_background: false
+            show_background: false
+          - show_name: false
+            show_state: true
+            name: define next_alarm sensor NAME here
+            show_icon: false
+            state_background: true
+            entity: input_text.phone_alarm_selector
+            visibility:
+              - condition: state
+                entity: automation.recovery_target_alarm2
+                state: "on"
+        name: NextAlarm2Target
+        tap_action:
+          action: toggle
+        icon: mdi:phone-clock
+        styles: |-
+          * { 
+            font-size: 11px !important;
+          }
       - type: custom:bubble-card
         card_type: button
         entity: input_boolean.recovery_adaptive_mode
@@ -103,25 +148,67 @@ sections:
                 state: "on"
             name: relax
         name: Self Calibration
-      - type: custom:mushroom-number-card
-        entity: input_number.rcth
-        display_mode: buttons
-        name: RCth
-        layout: horizontal
+      - type: tile
+        entity: input_number.rcth_lw
+        vertical: true
         visibility:
           - condition: state
             entity: input_boolean.recovery_adaptive_mode
             state: "off"
-      - type: custom:mushroom-number-card
-        entity: input_number.rpth
-        display_mode: buttons
-        name: RPth
-        fill_container: true
-        layout: horizontal
+        name: RC_lowWind
+        grid_options:
+          columns: 3
+          rows: 2
+        color: primary
+      - type: tile
+        entity: input_number.rcth_hw
+        vertical: true
         visibility:
           - condition: state
             entity: input_boolean.recovery_adaptive_mode
             state: "off"
+        grid_options:
+          columns: 3
+          rows: 2
+        name: RC_highWind
+        color: accent
+      - type: tile
+        entity: input_number.rpth_lw
+        vertical: true
+        visibility:
+          - condition: state
+            entity: input_boolean.recovery_adaptive_mode
+            state: "off"
+        grid_options:
+          columns: 3
+          rows: 2
+        name: RP_lowWind
+        color: primary
+      - type: tile
+        entity: input_number.rpth_hw
+        vertical: true
+        visibility:
+          - condition: state
+            entity: input_boolean.recovery_adaptive_mode
+            state: "off"
+        grid_options:
+          columns: 3
+          rows: 2
+        name: RP_highWind
+        color: accent
+      - type: custom:bubble-card
+        card_type: separator
+        icon: mdi:hand-pointing-up
+        card_layout: large
+        name: Set the constants (no self-calibration)
+        visibility:
+          - condition: state
+            entity: input_boolean.recovery_adaptive_mode
+            state: "off"
+        styles: |-
+          * { 
+            font-weight: normal !important;
+          }
   - type: grid
     cards:
       - type: heading
@@ -238,5 +325,23 @@ sections:
                }
         grid_options:
           columns: full
+      - type: custom:bubble-card
+        sub_button:
+          - entity: sensor.wind_speed_forecast_avg
+            name: forecast
+            show_name: true
+            show_state: true
+          - entity: sensor.wind_speed_avg
+            name: avg
+            show_name: true
+            show_state: true
+          - entity: sensor.temperature_forecast_avg
+            name: Text forecast
+            show_state: true
+            show_name: true
+        card_type: separator
+        icon: mdi:weather-cloudy-clock
+        card_layout: large-2-rows
+        name: ""
 cards: []
 dense_section_placement: true

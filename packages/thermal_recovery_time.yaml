@@ -54,7 +54,10 @@ input_boolean:
 
 input_text:
   sensor_interior_temperature:
-    name: Capteur de température intérieure
+    name: Interior temperature sensor label (e.g. sensor.room_temperature)
+  phone_alarm_selector:
+    name: Phone next alarm label (e.g. sensor.nexus_next_alarm)
+    icon: mdi:alarm
 
 input_number:
   rcth:
@@ -63,6 +66,7 @@ input_number:
     max: 19999
     step: 0.5
     unit_of_measurement: "h"
+    mode: box
     icon: mdi:home-battery-outline
   rpth:
     name: Coefficient RPth
@@ -70,6 +74,23 @@ input_number:
     max: 19999
     step: 0.5
     unit_of_measurement: "°C"
+    mode: box
+    icon: mdi:home-lightning-bolt-outline
+  rpth_lw:
+    name: RPth low wind
+    min: 0
+    max: 19999
+    step: 0.5
+    unit_of_measurement: "°C"
+    mode: box
+    icon: mdi:home-lightning-bolt-outline
+  rpth_hw:
+    name: RPth high wind
+    min: 0
+    max: 19999
+    step: 0.5
+    unit_of_measurement: "°C"
+    mode: box
     icon: mdi:home-lightning-bolt-outline
   rcth_fast:
     name: RCth dynamique
@@ -85,6 +106,7 @@ input_number:
     max: 19999
     step: 0.5
     unit_of_measurement: "h"
+    mode: box
     icon: mdi:home-battery-outline
   rcth_hw:
     name: RCth high wind
@@ -92,6 +114,7 @@ input_number:
     max: 19999
     step: 0.5
     unit_of_measurement: "h"
+    mode: box
     icon: mdi:home-battery-outline
   tsp:
     name: Consigne (Set Point)
@@ -99,6 +122,7 @@ input_number:
     max: 26
     step: 0.1
     unit_of_measurement: "°C"
+    mode: box
     icon: mdi:thermometer
   temperature_recovery_start:
     name: Tint at recovery START time
@@ -162,6 +186,7 @@ input_number:
     min: 0
     max: 15
     step: 0.05
+    mode: box
     icon: mdi:brain
   stop_lag_duration:
     name: Durée avant baisse de température
@@ -265,10 +290,31 @@ template:
           {% set forecast_hours = 3 %}
           {% set weather_entities = states.weather | selectattr('attributes.wind_speed', 'defined') | map('attr', 'entity_id') | list %}
           {{ (hourly_forecast[weather_entities[0]]['forecast'][:forecast_hours] | map(attribute='wind_speed') | sum / forecast_hours) | round(2) }}
-        unit_of_measurement: "m/s"
+        unit_of_measurement: "km/h"
         device_class: wind_speed
         state_class: measurement
         icon: mdi:weather-windy
+  - trigger:
+      - trigger: time_pattern
+        hours: "/1"
+    action:
+      - action: weather.get_forecasts
+        data:
+          type: hourly
+        target:
+          entity_id: >
+            {{ states.weather | selectattr('attributes.temperature', 'defined') | map('attr', 'entity_id') | list }}
+        response_variable: hourly_forecast
+    sensor:
+      - name: "temperature_forecast_avg"
+        unique_id: temperature_forecast_avg
+        state: >
+          {% set forecast_hours = 3 %}
+          {% set weather_entities = states.weather | selectattr('attributes.temperature', 'defined') | map('attr', 'entity_id') | list %}
+          {{ (hourly_forecast[weather_entities[0]]['forecast'][:forecast_hours] | map(attribute='temperature') | sum / forecast_hours) | round(1) }}
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
 
 sensor:
   - platform: statistics
@@ -278,6 +324,14 @@ sensor:
     state_characteristic: mean
     max_age:
       hours: 4
+  - platform: template
+    sensors:
+      phone_nxt_alarm:
+        friendly_name: "Phone nxt alarm"
+        unique_id: "phone_nxt_alarm"
+        icon_template: mdi:alarm
+        value_template: >
+          {{ states(states('input_text.phone_alarm_selector')) }}
 
 script:
   calculate_recovery_time:
@@ -285,11 +339,18 @@ script:
     sequence:
       - variables:
           recoverystart_hour: >-
-            {% set text = states('sensor.exterior_temperature')|float %}
-            {% set tint = states('sensor.interior_temperature')|float %}
-            {% set tsp = states('input_number.tsp')|float %}
-            {% set rcth = states('input_number.rcth')|float %}
-            {% set rpth = states('input_number.rpth')|float %}
+            {% set text = states('sensor.temperature_forecast_avg')|float(0) %}
+            {% set tint = states('sensor.interior_temperature')|float(17) %}
+            {% set tsp = states('input_number.tsp')|float(20) %}
+            {% set rcth_lw = states('input_number.rcth_lw')|float(50) %}
+            {% set rcth_hw = states('input_number.rcth_hw')|float(50) %}
+            {%- set wind_high = 60 %}
+            {%- set wind_low = 10 %}
+            {% set wind = states('input_number.wind_speed_forecast_avg')|float(10) %}
+            {% set rcth = max(0.1 , rcth_hw + (rcth_lw-rcth_hw)*(wind_high-wind)/(wind_high-wind_low)) %}
+            {% set rpth_lw = states('input_number.rpth_lw')|float(50) %}
+            {% set rpth_hw = states('input_number.rpth_hw')|float(50) %}
+            {% set rpth = max(0.1 , rpth_hw + (rpth_lw-rpth_hw)*(wind_high-wind)/(wind_high-wind_low)) %}
             {% set target_hour = states.input_datetime.target_hour.attributes.hour %}
             {% set target_minute = states.input_datetime.target_hour.attributes.minute %}
             {% set target_time = now().replace(hour=target_hour, minute=target_minute, second=0, microsecond=0) %}
@@ -359,8 +420,8 @@ script:
     alias: calcul l'évolution de rcth avant la relance
     sequence:
       - variables:
-          tint: "{{ states('sensor.interior_temperature') | float }}"
-          text: "{{ states('sensor.exterior_temperature') | float }}"
+          tint: "{{ states('sensor.interior_temperature') | float(17) }}"
+          text: "{{ states('sensor.exterior_temperature') | float(0) }}"
           tint_OFF: "{{ states('input_number.temperature_recovery_calc') | float }}"
           text_OFF: "{{ states('input_number.text_recovery_calc') | float }}"
           t_OFF: "{{ states('input_datetime.time_recovery_calc') | as_timestamp }}"
@@ -374,12 +435,12 @@ script:
           avg_text: "{{ (text_OFF + text) / 2 | float }}"
           rcth_fast: >-
             {% if (tint < tint_OFF) and (tint > avg_text)%}
-              {{ min( dt/log((avg_text-tint_OFF)/(avg_text-tint)) , 20000) }}
+              {{ dt/max(0.0001, log((avg_text-tint_OFF)/(avg_text-tint)) ) }}
             {% else %}
               {{ rcth_prev }}
             {% endif %}
       - data:
-          value: "{{ min( rcth_fast, 19999) | round(3) }}"
+          value: "{{ min(rcth_fast, 19999) | round(3) }}"
         target:
           entity_id: input_number.rcth_fast
         action: input_number.set_value
@@ -394,11 +455,11 @@ automation:
     triggers:
       - trigger: template
         value_template: >-
-          {{ states('sensor.interior_temperature')|float <= (states('input_number.temperature_recovery_calc')|float - 0.2) }}
+          {{ states('sensor.interior_temperature')|float(17) <= (states('input_number.temperature_recovery_calc')|float - 0.2) }}
         id: temperatureDecrease
       - trigger: template
         value_template: >-
-          {{ states('sensor.interior_temperature')|float > (states('input_number.temperature_recovery_calc')|float) }}
+          {{ states('sensor.interior_temperature')|float(17) > (states('input_number.temperature_recovery_calc')|float) }}
         id: temperatureIncrease
     actions:
       - choose:
@@ -418,12 +479,12 @@ automation:
                 target:
                   entity_id: input_number.temperature_recovery_calc
                 data:
-                  value: "{{ states('sensor.interior_temperature') | float }}"
+                  value: "{{ states('sensor.interior_temperature') | float(17) }}"
               - action: input_number.set_value
                 target:
                   entity_id: input_number.text_recovery_calc
                 data:
-                  value: "{{ states('sensor.exterior_temperature') | float }}"
+                  value: "{{ states('sensor.exterior_temperature') | float(0) }}"
               - action: input_datetime.set_datetime
                 data:
                   datetime: "{{ now() }}"
@@ -447,7 +508,7 @@ automation:
                 target:
                   entity_id: input_number.temperature_recovery_calc
                 data:
-                  value: "{{ states('sensor.interior_temperature') | float }}"
+                  value: "{{ states('sensor.interior_temperature') | float(17) }}"
 
     mode: single
 
@@ -506,6 +567,37 @@ automation:
                 id:
                   - heatingstopTIME
             sequence:
+              - if:
+                  - condition: numeric_state
+                    entity_id: input_number.rcth_lw
+                    above: 0
+                then:
+                  - delay: "00:00:00"
+                else:
+                  - action: input_number.set_value
+                    target:
+                      entity_id: input_number.rcth_lw
+                    data:
+                      value: "{{ 50 }}"
+                  - action: input_number.set_value
+                    target:
+                      entity_id: input_number.rcth_hw
+                    data:
+                      value: "{{ 50 }}"
+                  - action: input_number.set_value
+                    target:
+                      entity_id: input_number.rpth_lw
+                    data:
+                      value: "{{ 50 }}"
+                  - action: input_number.set_value
+                    target:
+                      entity_id: input_number.rpth_hw
+                    data:
+                      value: "{{ 50 }}"
+                  - action: notify.send_message
+                    data:
+                      message: "init constants to 50"
+
               - action: input_datetime.set_datetime
                 data:
                   datetime: "{{ now() }}"
@@ -515,7 +607,7 @@ automation:
                 target:
                   entity_id: input_number.temperature_recovery_calc
                 data:
-                  value: "{{ states('sensor.interior_temperature') | float }}"
+                  value: "{{ states('sensor.interior_temperature') | float(17) }}"
               - action: automation.turn_on
                 target:
                   entity_id: automation.detect_temperature_decrease_start_time
@@ -529,12 +621,12 @@ automation:
                 target:
                   entity_id: input_number.temperature_recovery_start
                 data:
-                  value: "{{ states('sensor.interior_temperature') | float }}"
+                  value: "{{ states('sensor.interior_temperature') | float(17) }}"
               - action: input_number.set_value
                 target:
                   entity_id: input_number.text_recovery_start
                 data:
-                  value: "{{ states('sensor.exterior_temperature') | float }}"
+                  value: "{{ states('sensor.exterior_temperature') | float(0) }}"
               - action: input_datetime.set_datetime
                 data:
                   datetime: "{{ now() }}"
@@ -554,16 +646,48 @@ automation:
                     {%- set avg_text = (text_start + text_calc) / 2 %}
                     {%- set dt = (t_start - t_calc) / 3600 %}
                     {{ min(19999, dt/log((avg_text - temp_calc)/(avg_text - temp_start)) )| round(3) }}
+              - variables:
+                  wind_high: 60
+                  wind_low: 10
+                  wind: "{{ (states('sensor.wind_speed_avg') | float) * 3.6 }}"
+                  x: "{{ (wind-wind_low)/(wind_high-wind_low)-0.5 }}"
+                  rcth_calc: "{{ states('input_number.rcth_calculated') | float }}"
+                  rcth_lw: "{{ states('input_number.rcth_lw') | float(50) }}"
+                  rcth_hw: "{{ states('input_number.rcth_hw') | float(50) }}"
+                  rcth_interpol: "{{ max(0.1 , rcth_lw + (rcth_hw-rcth_lw)*(x+0.5)) }}"
+                  erc: "{{ rcth_calc - rcth_interpol }}"
+                  relax: "{{ states('input_number.relaxation_factor') | float }}"
+              - action: input_number.set_value
+                target:
+                  entity_id: input_number.rcth_lw
+                data:
+                  value: >
+                    {%- set rcth_lw_new = max(0.1 , rcth_lw + erc * (1-5/3*x-2*x*x+8/3*x*x*x)) %}
+                    {%- if states('input_boolean.recovery_adaptive_mode') %}
+                      {{ min(19999, (rcth_lw+relax*rcth_lw_new)/(1+relax) )| round(3) }}
+                    {%- else %}
+                      {{ rcth_lw }}
+                    {%- endif %}
+              - action: input_number.set_value
+                target:
+                  entity_id: input_number.rcth_hw
+                data:
+                  value: >
+                    {%- set rcth_hw_new = max(0.1 , rcth_hw + erc * (1+5/3*x-2*x*x-8/3*x*x*x)) %}
+                    {%- set rcth_lw = states('input_number.rcth_lw') | float(50) %}
+                    {%- if states('input_boolean.recovery_adaptive_mode') %}
+                      {{ min(rcth_lw, (rcth_hw+relax*rcth_hw_new)/(1+relax) )| round(3) }}
+                    {%- else %}
+                      {{ rcth_hw }}
+                    {%- endif %}
               - action: input_number.set_value
                 target:
                   entity_id: input_number.rcth
                 data:
                   value: >
                     {%- set rcth_prev = states('input_number.rcth') | float %}
-                    {%- set rcth_calc = states('input_number.rcth_calculated') | float %}
-                    {%- set relax = states('input_number.relaxation_factor') | float %}
                     {%- if states('input_boolean.recovery_adaptive_mode') %}
-                      {{ min(19999, (rcth_prev+relax*rcth_calc)/(1+relax) )| round(3) }}
+                      {{ max(0.1 , (rcth_prev+relax*rcth_calc)/(1+relax) )| round(3) }}
                     {%- else %}
                       {{ rcth_prev }}
                     {%- endif %}
@@ -586,17 +710,24 @@ automation:
                 target:
                   entity_id: input_number.temperature_recovery_end
                 data:
-                  value: "{{ states('sensor.interior_temperature') | float }}"
+                  value: "{{ states('sensor.interior_temperature') | float(17) }}"
               - action: input_number.set_value
                 target:
                   entity_id: input_number.text_recovery_end
                 data:
-                  value: "{{ states('sensor.exterior_temperature') | float }}"
+                  value: "{{ states('sensor.exterior_temperature') | float(0) }}"
               - action: input_datetime.set_datetime
                 data:
                   datetime: "{{ now() }}"
                 target:
                   entity_id: input_datetime.time_recovery_end
+              - variables:
+                  wind_high: 60
+                  wind_low: 10
+                  wind: "{{ (states('sensor.wind_speed_avg') | float) * 3.6 }}"
+                  rcth_lw: "{{ states('input_number.rcth_lw') | float(50) }}"
+                  rcth_hw: "{{ states('input_number.rcth_hw') | float(50) }}"
+                  rcth_interpol: "{{ max(0.1 , rcth_hw + (rcth_lw-rcth_hw)*(wind_high-wind)/(wind_high-wind_low)) }}"
               - action: input_number.set_value
                 target:
                   entity_id: input_number.rpth_calculated
@@ -610,8 +741,42 @@ automation:
                     {%- set temp_end = states('input_number.temperature_recovery_end') | float %}
                     {%- set avg_text = (text_start + text_end) / 2 %}
                     {%- set dt = (t_end - t_start) / 3600 %}
-                    {%- set rcth = states('input_number.rcth_calculated') | float %}
-                    {{ min(19999, ((avg_text - temp_end) * e**(dt/rcth) - (avg_text - temp_start)) / (1-e**(dt/rcth)) ) | round(3) }}
+                    {{ min(19999, max(0.1 , ((avg_text - temp_end) * e**(dt/rcth_interpol) - (avg_text - temp_start)) / (1-e**(dt/rcth_interpol)) )) | round(3) }}
+              - variables:
+                  wind_high: 60
+                  wind_low: 10
+                  wind: "{{ (states('sensor.wind_speed_avg') | float) * 3.6 }}"
+                  x: "{{ (wind-wind_low)/(wind_high-wind_low)-0.5 }}"
+                  rpth_calc: "{{ states('input_number.rpth_calculated') | float }}"
+                  rpth_lw: "{{ states('input_number.rpth_lw') | float(50) }}"
+                  rpth_hw: "{{ states('input_number.rpth_hw') | float(50) }}"
+                  rpth_interpol: "{{ max(0.1 , rpth_lw + (rpth_hw-rpth_lw)*(x+0.5)) }}"
+                  erp: "{{ rpth_calc - rpth_interpol }}"
+                  relax: "{{ states('input_number.relaxation_factor') | float }}"
+              - action: input_number.set_value
+                target:
+                  entity_id: input_number.rpth_lw
+                data:
+                  value: >
+                    {%- set rpth_lw_new = max(0.1 , rpth_lw + erp * (1-5/3*x-2*x*x+8/3*x*x*x)) %}
+                    {%- if states('input_boolean.recovery_adaptive_mode') %}
+                      {{ min(19999, (rpth_lw+relax*rpth_lw_new)/(1+relax) )| round(3) }}
+                    {%- else %}
+                      {{ rpth_lw }}
+                    {%- endif %}
+              - action: input_number.set_value
+                target:
+                  entity_id: input_number.rpth_hw
+                data:
+                  value: >
+                    {%- set rpth_hw_new = max(0.1 , rpth_hw + erp * (1+5/3*x-2*x*x-8/3*x*x*x)) %}
+                    {%- set rpth_lw = states('input_number.rpth_lw') | float(50) %}
+                    {%- if states('input_boolean.recovery_adaptive_mode') %}
+                      {{ min(rpth_lw, (rpth_hw+relax*rpth_hw_new)/(1+relax) )| round(3) }}
+                    {%- else %}
+                      {{ rpth_hw }}
+                    {%- endif %}
+
               - action: input_number.set_value
                 target:
                   entity_id: input_number.rpth
@@ -621,11 +786,37 @@ automation:
                     {%- set rpth_calc = states('input_number.rpth_calculated') | float %}
                     {%- set relax = states('input_number.relaxation_factor') | float %}
                     {%- if states('input_boolean.recovery_adaptive_mode') %}
-                      {{ min(19999, (rpth_prev+relax*rpth_calc)/(1+relax) )| round(3) }}
+                      {{ min(19999, max(0.1 ,( (rpth_prev+relax*rpth_calc)/(1+relax) )))| round(3) }}
                     {%- else %}
                       {{ rpth_prev }}
                     {%- endif %}
               - action: input_boolean.turn_off
                 target:
                   entity_id: input_boolean.rp_calc_mode
+    mode: single
+
+  - id: Recovery_target_alarm2
+    alias: Recovery_target_alarm2
+    description: "detect phone alarm and set it to the target hour for recovery"
+    triggers:
+      - trigger: state
+        entity_id:
+          - sensor.phone_nxt_alarm
+    conditions:
+      - condition: template
+        value_template: "{{ states('sensor.phone_nxt_alarm') != 'unknown' }}"
+      - condition: template
+        value_template: >
+          {% set alarm_time = states('sensor.phone_nxt_alarm') | as_datetime %}
+          {% set tomorrow = (now() + timedelta(days=1)).date() %}
+          {{ alarm_time.date() == now().date() or alarm_time.date() == tomorrow }}
+    actions:
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.target_hour
+        data:
+          time: >
+            {% set alarm_time = states('sensor.phone_nxt_alarm') %}
+            {% set alarm_time = alarm_time | as_datetime | as_local %}
+            {{ alarm_time.strftime('%H:%M:%S') }}
     mode: single
