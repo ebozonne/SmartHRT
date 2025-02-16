@@ -47,7 +47,7 @@ The "magic" of this program is to figure out and adjust $`RC_{th}`$ and $`RP_{th
   - SET the interior temperature `sensor name` (e.g. my own indoor sensor -> `sensor.salon_temperature`)
   - SET the time of heating interruption (`recoverycalc_hour`) - e.g. 11PM
   - SET the wake-up time (`target_hour`) - e.g. 6AM
-  - OR SET your phone' next alarm `sensor name` in order to get an automatic update of the target time with your wake up time (e.g. my phone alarm is synchronized in home assistant as `sensor.clt_l29_next_alarm`)
+  - OR SET your phone [next alarm](https://github.com/ebozonne/SmartHRT/blob/main/FAQ.md#how-to-set-phone-next_alarm-as-target-time-) `sensor name` in order to get an automatic update of the target time with your wake up time (e.g. my phone alarm is synchronized in home assistant as `sensor.clt_l29_next_alarm`)
   - SET your target temperature (`tsp`) - e.g. 20°C
     
   Default adaptive mode (can be adjusted or deactivated for further manual tuning -> see advanced mode):
