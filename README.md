@@ -64,7 +64,6 @@ The "magic" of this program is to figure out and adjust $`RC_{th}`$ and $`RP_{th
   - Set up a package folder if not already done (see https://www.home-assistant.io/docs/configuration/packages/)
 - For dashboard interface:
   - [HACS](https://www.home-assistant.io/blog/2024/08/21/hacs-the-best-way-to-share-community-made-projects/#how-to-install)
-  - [Lovelace-Mushroom](https://github.com/piitaya/lovelace-mushroom)
   - [Bubble-Card](https://github.com/Clooos/Bubble-Card)
   - [Mini-Graph-Card](https://github.com/kalkih/mini-graph-card)
   - [Lovelace-Card-Mod](https://github.com/thomasloven/lovelace-card-mod)
